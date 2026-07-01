@@ -112,6 +112,9 @@ modules.xml
 .idea/misc.xml
 *.ipr
 
+### Intellij other garbage ###
+.idea/kotlinc.xml
+
 ### macOS ###
 *.DS_Store
 .AppleDouble

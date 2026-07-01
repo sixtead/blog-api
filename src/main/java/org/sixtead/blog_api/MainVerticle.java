@@ -1,26 +1,35 @@
 package org.sixtead.blog_api;
 
+import io.vertx.config.ConfigRetriever;
+import io.vertx.config.ConfigRetrieverOptions;
+import io.vertx.config.ConfigStoreOptions;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
+import org.sixtead.blog_api.layers.web.WebVerticle;
 
 public class MainVerticle extends VerticleBase {
 
   @Override
   public Future<?> start() {
-    var httpServer = vertx.createHttpServer();
-    var router = Router.router(vertx);
+    var configRetriever = ConfigRetriever.create(
+      vertx,
+      new ConfigRetrieverOptions()
+        .addStore(
+          new ConfigStoreOptions()
+            .setType("file")
+            .setFormat("properties")
+            .setConfig(
+              new JsonObject()
+                .put("path", "application.properties")
+            )
+        )
+    );
 
-    router
-      .get("/health")
-      .respond(ctx -> Future.succeededFuture(JsonObject.of("status", "UP")));
-
-    return httpServer
-      .requestHandler(router)
-      .listen(8888)
-      .onSuccess(http -> {
-        System.out.println("HTTP server started on port 8888");
+    return configRetriever.getConfig()
+      .onComplete(config -> {
+        vertx.deployVerticle(WebVerticle::new, new DeploymentOptions().setConfig(config.result()));
       });
   }
 }
