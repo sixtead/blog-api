@@ -10,18 +10,24 @@ import io.vertx.core.json.JsonObject;
 import org.sixtead.blog_api.layers.web.WebVerticle;
 
 public class MainVerticle extends VerticleBase {
-    @Override
-    public Future<?> start() {
-        var configRetriever = ConfigRetriever.create(
-                vertx,
-                new ConfigRetrieverOptions()
-                        .addStore(new ConfigStoreOptions()
-                                .setType("file")
-                                .setFormat("properties")
-                                .setConfig(new JsonObject().put("path", "application.properties"))));
+  @Override
+  public Future<?> start() {
+    var configRetriever =
+        ConfigRetriever.create(
+            vertx,
+            new ConfigRetrieverOptions()
+                .addStore(
+                    new ConfigStoreOptions()
+                        .setType("file")
+                        .setFormat("properties")
+                        .setConfig(new JsonObject().put("path", "application.properties"))));
 
-        return configRetriever.getConfig().onComplete(config -> {
-            vertx.deployVerticle(WebVerticle::new, new DeploymentOptions().setConfig(config.result()));
-        });
-    }
+    return configRetriever
+        .getConfig()
+        .onComplete(
+            config -> {
+              vertx.deployVerticle(
+                  WebVerticle::new, new DeploymentOptions().setConfig(config.result()));
+            });
+  }
 }
