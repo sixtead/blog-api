@@ -7,27 +7,36 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.json.JsonObject;
+import org.sixtead.blog_api.config.ConfigurationValidator;
 import org.sixtead.blog_api.layers.web.WebVerticle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MainVerticle extends VerticleBase {
+  private final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
+
   @Override
   public Future<?> start() {
     var configRetriever =
         ConfigRetriever.create(
-            vertx,
-            new ConfigRetrieverOptions()
-                .addStore(
-                    new ConfigStoreOptions()
-                        .setType("file")
-                        .setFormat("properties")
-                        .setConfig(new JsonObject().put("path", "application.properties"))));
+                vertx,
+                new ConfigRetrieverOptions()
+                    .addStore(
+                        new ConfigStoreOptions()
+                            .setType("file")
+                            .setFormat("properties")
+                            .setConfig(new JsonObject().put("path", "application.properties"))))
+            .setConfigurationProcessor(new ConfigurationValidator());
 
     return configRetriever
         .getConfig()
         .onComplete(
             config -> {
-              vertx.deployVerticle(
-                  WebVerticle::new, new DeploymentOptions().setConfig(config.result()));
+              Future.all(
+                      vertx.deployVerticle(
+                          WebVerticle::new, new DeploymentOptions().setConfig(config.result())))
+                  .onSuccess(_ -> LOGGER.info("Application started"))
+                  .onFailure(err -> LOGGER.error("Application failed to start", err));
             });
   }
 }
