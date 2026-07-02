@@ -113,7 +113,7 @@ modules.xml
 *.ipr
 
 ### Intellij other garbage ###
-.idea/kotlinc.xml
+.idea/*
 
 ### macOS ###
 *.DS_Store
