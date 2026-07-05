@@ -38,7 +38,7 @@ public class WebVerticleTest extends BaseMainVerticleTest {
 
     client
         .request(HttpMethod.POST, 8888, "localhost", "/posts")
-        .sendJsonObject(JsonObject.of("title", "My article"))
+        .sendJsonObject(new JsonObject().put("title", "My article").put("content", "My content"))
         .onComplete(
             testContext.succeeding(
                 response ->

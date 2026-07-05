@@ -69,6 +69,20 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-config</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-service-proxy</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-codegen</artifactId>
+      <classifier>processor</classifier>
+    </dependency>
+
+    <dependency>
+      <groupId>tools.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -134,6 +148,11 @@
             <goals>
               <goal>compile</goal>
             </goals>
+            <configuration>
+              <annotationProcessors>
+                <annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
+              </annotationProcessors>
+            </configuration>
           </execution>
           <execution>
             <id>testCompile</id>
