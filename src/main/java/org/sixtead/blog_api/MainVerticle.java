@@ -8,6 +8,8 @@ import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.json.JsonObject;
 import org.sixtead.blog_api.config.ConfigurationValidator;
+import org.sixtead.blog_api.layers.domain.CreatePostVerticle;
+import org.sixtead.blog_api.layers.persistence.InsertPostVerticle;
 import org.sixtead.blog_api.layers.web.WebVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +36,9 @@ public class MainVerticle extends VerticleBase {
             config -> {
               Future.all(
                       vertx.deployVerticle(
-                          WebVerticle::new, new DeploymentOptions().setConfig(config.result())))
+                          WebVerticle::new, new DeploymentOptions().setConfig(config.result())),
+                      vertx.deployVerticle(new CreatePostVerticle()),
+                      vertx.deployVerticle(new InsertPostVerticle()))
                   .onSuccess(_ -> LOGGER.info("Application started"))
                   .onFailure(err -> LOGGER.error("Application failed to start", err));
             });
