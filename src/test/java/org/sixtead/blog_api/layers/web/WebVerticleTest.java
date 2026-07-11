@@ -3,15 +3,34 @@ package org.sixtead.blog_api.layers.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.sixtead.blog_api.BaseMainVerticleTest;
 
 public class WebVerticleTest extends BaseMainVerticleTest {
+
+  static JsonObject VALID_POST =
+      new JsonObject().put("title", "My article").put("content", "My content");
+
+  static Stream<Arguments> invalidJsons() {
+    return Stream.of(
+        Arguments.of(new JsonObject()),
+        Arguments.of(VALID_POST.copy().put("title", null)),
+        Arguments.of(VALID_POST.copy().put("title", "")),
+        Arguments.of(VALID_POST.copy().put("content", null)),
+        Arguments.of(VALID_POST.copy().put("content", "")),
+        Arguments.of(VALID_POST.copy().put("not-supported-field", "")));
+  }
 
   @Test
   void health_endpoint(Vertx vertx, VertxTestContext testContext) throws Throwable {
@@ -38,17 +57,38 @@ public class WebVerticleTest extends BaseMainVerticleTest {
 
     client
         .request(HttpMethod.POST, 8888, "localhost", "/posts")
-        .sendJsonObject(new JsonObject().put("title", "My article").put("content", "My content"))
+        .sendJsonObject(VALID_POST)
         .onComplete(
             testContext.succeeding(
                 response ->
                     testContext.verify(
                         () -> {
                           assertThat(response.statusCode()).isEqualTo(201);
-                          assertThat(response.getHeader("location"))
+                          assertThat(response.getHeader(HttpHeaders.LOCATION))
                               .matches(
                                   Pattern.compile(
                                       "http://localhost:8888/posts/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"));
+
+                          testContext.completeNow();
+                        })));
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @MethodSource("invalidJsons")
+  void post_posts_endpoint_with_invalid_json(
+      JsonObject argument, Vertx vertx, VertxTestContext testContext) throws Throwable {
+    client = WebClient.create(vertx);
+
+    client
+        .request(HttpMethod.POST, 8888, "localhost", "/posts")
+        .sendJsonObject(argument)
+        .onComplete(
+            testContext.succeeding(
+                response ->
+                    testContext.verify(
+                        () -> {
+                          assertThat(response.statusCode()).isEqualTo(400);
 
                           testContext.completeNow();
                         })));

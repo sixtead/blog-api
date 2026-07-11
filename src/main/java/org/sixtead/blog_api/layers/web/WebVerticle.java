@@ -2,10 +2,20 @@ package org.sixtead.blog_api.layers.web;
 
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
+import io.vertx.ext.web.validation.RequestParameters;
+import io.vertx.ext.web.validation.ValidationHandler;
+import io.vertx.ext.web.validation.builder.Bodies;
+import io.vertx.ext.web.validation.builder.ValidationHandlerBuilder;
+import io.vertx.json.schema.Draft;
+import io.vertx.json.schema.JsonSchemaOptions;
+import io.vertx.json.schema.SchemaRepository;
+import io.vertx.json.schema.common.dsl.Keywords;
+import io.vertx.json.schema.common.dsl.Schemas;
 import io.vertx.serviceproxy.ServiceProxyBuilder;
 import org.sixtead.blog_api.layers.domain.models.CreatePostPayload;
 import org.sixtead.blog_api.layers.domain.services.PostsService;
@@ -20,32 +30,52 @@ public class WebVerticle extends VerticleBase {
     var httpServer = vertx.createHttpServer();
     var router = Router.router(vertx);
     var port = this.config().getInteger("http.port");
+    var schemaRepository =
+        SchemaRepository.create(
+            new JsonSchemaOptions()
+                .setBaseUri("http://localhost:" + port + "/")
+                .setDraft(Draft.DRAFT202012));
 
     var postsService =
         new ServiceProxyBuilder(vertx).setAddress(PostsService.ADDRESS).build(PostsService.class);
 
-    var eventBus = vertx.eventBus();
-
     router.route().handler(LoggerHandler.create());
 
-    router.get("/health").respond(ctx -> Future.succeededFuture(JsonObject.of("status", "UP")));
+    router.get("/health").respond(_ -> Future.succeededFuture(JsonObject.of("status", "UP")));
 
     router
         .post("/posts")
         .consumes("application/json")
         .handler(BodyHandler.create())
         .handler(
-            ctx ->
-                postsService
-                    .createPost(new CreatePostPayload(ctx.body().asJsonObject()))
-                    .onSuccess(
-                        post ->
-                            ctx.response()
-                                .setStatusCode(201)
-                                .putHeader(
-                                    "location",
-                                    ctx.request().absoluteURI() + "/" + post.getId().toString())
-                                .end()));
+            ValidationHandlerBuilder.create(schemaRepository)
+                .body(
+                    Bodies.json(
+                        Schemas.objectSchema()
+                            .requiredProperty(
+                                "title", Schemas.stringSchema().with(Keywords.minLength(1)))
+                            .requiredProperty(
+                                "content", Schemas.stringSchema().with(Keywords.minLength(1)))
+                            .allowAdditionalProperties(false)))
+                .build())
+        .handler(
+            ctx -> {
+              var requestParameters =
+                  (RequestParameters) ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
+              var createPostPayload =
+                  new CreatePostPayload(requestParameters.body().getJsonObject());
+              postsService
+                  .createPost(createPostPayload)
+                  .onSuccess(
+                      post ->
+                          ctx.response()
+                              .setStatusCode(201)
+                              .putHeader(
+                                  HttpHeaders.LOCATION,
+                                  ctx.request().absoluteURI() + "/" + post.getId().toString())
+                              .end());
+            });
+
     return httpServer
         .requestHandler(router)
         .listen(port)
