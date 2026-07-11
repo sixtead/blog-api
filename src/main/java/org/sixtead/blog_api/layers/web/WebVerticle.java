@@ -2,23 +2,19 @@ package org.sixtead.blog_api.layers.web;
 
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
-import io.vertx.ext.web.validation.RequestParameters;
-import io.vertx.ext.web.validation.ValidationHandler;
 import io.vertx.ext.web.validation.builder.Bodies;
 import io.vertx.ext.web.validation.builder.ValidationHandlerBuilder;
 import io.vertx.json.schema.Draft;
 import io.vertx.json.schema.JsonSchemaOptions;
 import io.vertx.json.schema.SchemaRepository;
-import io.vertx.json.schema.common.dsl.Keywords;
-import io.vertx.json.schema.common.dsl.Schemas;
 import io.vertx.serviceproxy.ServiceProxyBuilder;
 import org.sixtead.blog_api.layers.domain.models.CreatePostPayload;
 import org.sixtead.blog_api.layers.domain.services.PostsService;
+import org.sixtead.blog_api.layers.web.handlers.PostPostsHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,32 +45,9 @@ public class WebVerticle extends VerticleBase {
         .handler(BodyHandler.create())
         .handler(
             ValidationHandlerBuilder.create(schemaRepository)
-                .body(
-                    Bodies.json(
-                        Schemas.objectSchema()
-                            .requiredProperty(
-                                "title", Schemas.stringSchema().with(Keywords.minLength(1)))
-                            .requiredProperty(
-                                "content", Schemas.stringSchema().with(Keywords.minLength(1)))
-                            .allowAdditionalProperties(false)))
+                .body(Bodies.json(CreatePostPayload.jsonSchema()))
                 .build())
-        .handler(
-            ctx -> {
-              var requestParameters =
-                  (RequestParameters) ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-              var createPostPayload =
-                  new CreatePostPayload(requestParameters.body().getJsonObject());
-              postsService
-                  .createPost(createPostPayload)
-                  .onSuccess(
-                      post ->
-                          ctx.response()
-                              .setStatusCode(201)
-                              .putHeader(
-                                  HttpHeaders.LOCATION,
-                                  ctx.request().absoluteURI() + "/" + post.getId().toString())
-                              .end());
-            });
+        .handler(new PostPostsHandler(postsService));
 
     return httpServer
         .requestHandler(router)
