@@ -11,7 +11,7 @@ public class PostsDaoVerticle extends VerticleBase {
   public Future<?> start() throws Exception {
     return new ServiceBinder(vertx)
         .setAddress(PostsDao.ADDRESS)
-        .register(PostsDao.class, new PostsDaoImpl(vertx))
+        .register(PostsDao.class, new PostsDaoImpl())
         .completion();
   }
 }

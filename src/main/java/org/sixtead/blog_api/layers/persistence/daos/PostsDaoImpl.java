@@ -1,18 +1,16 @@
 package org.sixtead.blog_api.layers.persistence.daos;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.sixtead.blog_api.layers.domain.models.Post;
 
 public class PostsDaoImpl implements PostsDao {
-  private final Map<UUID, Post> posts = new HashMap<>();
-  private Vertx vertx;
+  private final Map<UUID, Post> posts;
 
-  public PostsDaoImpl(Vertx vertx) {
-    this.vertx = vertx;
+  public PostsDaoImpl() {
+    this.posts = new HashMap<>();
   }
 
   @Override

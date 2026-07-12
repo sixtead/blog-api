@@ -9,8 +9,8 @@ import org.sixtead.blog_api.layers.domain.models.Post;
 public interface PostsDao {
   String ADDRESS = "posts-dao";
 
-  static PostsDao create(Vertx vertx) {
-    return new PostsDaoImpl(vertx);
+  static PostsDao create() {
+    return new PostsDaoImpl();
   }
 
   static PostsDao createProxy(Vertx vertx, String address) {
