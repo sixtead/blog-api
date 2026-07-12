@@ -1,0 +1,107 @@
+package org.sixtead.blog_api.layers.web;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.junit5.VertxTestContext;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import org.assertj.core.api.InstanceOfAssertFactories;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.sixtead.blog_api.BaseMainVerticleTest;
+
+public class WebVerticleTest extends BaseMainVerticleTest {
+
+  static JsonObject VALID_POST =
+      new JsonObject().put("title", "My article").put("content", "My content");
+
+  static Stream<Arguments> invalidJsons() {
+    return Stream.of(
+        Arguments.of(new JsonObject()),
+        Arguments.of(VALID_POST.copy().put("title", null)),
+        Arguments.of(VALID_POST.copy().put("title", "")),
+        Arguments.of(VALID_POST.copy().put("content", null)),
+        Arguments.of(VALID_POST.copy().put("content", "")),
+        Arguments.of(VALID_POST.copy().put("not-supported-field", "")));
+  }
+
+  @Test
+  void health_endpoint(Vertx vertx, VertxTestContext testContext) throws Throwable {
+    client = WebClient.create(vertx);
+
+    client
+        .request(HttpMethod.GET, 8888, "localhost", "/health")
+        .send()
+        .onComplete(
+            testContext.succeeding(
+                res ->
+                    testContext.verify(
+                        () -> {
+                          assertThat(res.statusCode()).isEqualTo(200);
+                          assertThat(res.bodyAsJsonObject())
+                              .isEqualTo(JsonObject.of("status", "UP"));
+                          testContext.completeNow();
+                        })));
+  }
+
+  @Test
+  void post_posts_endpoint(Vertx vertx, VertxTestContext testContext) throws Throwable {
+    client = WebClient.create(vertx);
+
+    client
+        .request(HttpMethod.POST, 8888, "localhost", "/posts")
+        .sendJsonObject(VALID_POST)
+        .onComplete(
+            testContext.succeeding(
+                response ->
+                    testContext.verify(
+                        () -> {
+                          assertThat(response.statusCode()).isEqualTo(201);
+                          assertThat(response.getHeader(HttpHeaders.LOCATION))
+                              .matches(
+                                  Pattern.compile(
+                                      "http://localhost:8888/posts/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"));
+                          assertThat(response.bodyAsJsonObject())
+                              .asInstanceOf(InstanceOfAssertFactories.type(JsonObject.class))
+                              .satisfies(
+                                  body -> {
+                                    assertThat(body.fieldNames())
+                                        .containsExactlyInAnyOrder("id", "title", "content");
+                                    var bodyCopy = body.copy();
+                                    bodyCopy.remove("id");
+                                    assertThat(bodyCopy).isEqualTo(VALID_POST);
+                                  });
+
+                          testContext.completeNow();
+                        })));
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @MethodSource("invalidJsons")
+  void post_posts_endpoint_with_invalid_json(
+      JsonObject argument, Vertx vertx, VertxTestContext testContext) throws Throwable {
+    client = WebClient.create(vertx);
+
+    client
+        .request(HttpMethod.POST, 8888, "localhost", "/posts")
+        .sendJsonObject(argument)
+        .onComplete(
+            testContext.succeeding(
+                response ->
+                    testContext.verify(
+                        () -> {
+                          assertThat(response.statusCode()).isEqualTo(400);
+
+                          testContext.completeNow();
+                        })));
+  }
+}

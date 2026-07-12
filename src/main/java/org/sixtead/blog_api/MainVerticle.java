@@ -8,12 +8,14 @@ import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.json.JsonObject;
 import org.sixtead.blog_api.config.ConfigurationValidator;
+import org.sixtead.blog_api.layers.domain.PostServiceVerticle;
+import org.sixtead.blog_api.layers.persistence.PostsDaoVerticle;
 import org.sixtead.blog_api.layers.web.WebVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class MainVerticle extends VerticleBase {
-  private final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
+  private final Logger logger = LoggerFactory.getLogger(MainVerticle.class);
 
   @Override
   public Future<?> start() {
@@ -34,9 +36,11 @@ public class MainVerticle extends VerticleBase {
             config -> {
               Future.all(
                       vertx.deployVerticle(
-                          WebVerticle::new, new DeploymentOptions().setConfig(config.result())))
-                  .onSuccess(_ -> LOGGER.info("Application started"))
-                  .onFailure(err -> LOGGER.error("Application failed to start", err));
+                          WebVerticle::new, new DeploymentOptions().setConfig(config.result())),
+                      vertx.deployVerticle(new PostServiceVerticle()),
+                      vertx.deployVerticle(new PostsDaoVerticle()))
+                  .onSuccess(_ -> logger.info("Application started"))
+                  .onFailure(err -> logger.error("Application failed to start", err));
             });
   }
 }
