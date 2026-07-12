@@ -30,6 +30,6 @@ public class PostPostsHandler implements Handler<RoutingContext> {
                     .putHeader(
                         HttpHeaders.LOCATION,
                         event.request().absoluteURI() + "/" + post.getId().toString())
-                    .end());
+                    .end(post.toJson().toBuffer()));
   }
 }

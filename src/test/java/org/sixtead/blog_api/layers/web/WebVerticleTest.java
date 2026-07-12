@@ -10,6 +10,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -68,6 +69,16 @@ public class WebVerticleTest extends BaseMainVerticleTest {
                               .matches(
                                   Pattern.compile(
                                       "http://localhost:8888/posts/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"));
+                          assertThat(response.bodyAsJsonObject())
+                              .asInstanceOf(InstanceOfAssertFactories.type(JsonObject.class))
+                              .satisfies(
+                                  body -> {
+                                    assertThat(body.fieldNames())
+                                        .containsExactlyInAnyOrder("id", "title", "content");
+                                    var bodyCopy = body.copy();
+                                    bodyCopy.remove("id");
+                                    assertThat(bodyCopy).isEqualTo(VALID_POST);
+                                  });
 
                           testContext.completeNow();
                         })));
