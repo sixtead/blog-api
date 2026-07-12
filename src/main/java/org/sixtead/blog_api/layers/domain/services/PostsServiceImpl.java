@@ -9,17 +9,14 @@ import org.sixtead.blog_api.layers.domain.models.Post;
 import org.sixtead.blog_api.layers.persistence.daos.PostsDao;
 
 public class PostsServiceImpl implements PostsService {
-  private final Vertx vertx;
+  private final PostsDao dao;
 
   public PostsServiceImpl(Vertx vertx) {
-    this.vertx = vertx;
+    this.dao = new ServiceProxyBuilder(vertx).setAddress(PostsDao.ADDRESS).build(PostsDao.class);
   }
 
   @Override
   public Future<Post> createPost(CreatePostPayload payload) {
-    PostsDao dao =
-        new ServiceProxyBuilder(vertx).setAddress(PostsDao.ADDRESS).build(PostsDao.class);
-
     var post = new Post(UUID.randomUUID(), payload.getTitle(), payload.getContent());
 
     return dao.createPost(post);
