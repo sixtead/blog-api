@@ -132,6 +132,11 @@
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>${maven-compiler-plugin.version}</version>
+        <configuration>
+          <annotationProcessors>
+            <annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
+          </annotationProcessors>
+        </configuration>
         <executions>
           <execution>
             <id>default-compile</id>
@@ -147,11 +152,6 @@
             <goals>
               <goal>compile</goal>
             </goals>
-            <configuration>
-              <annotationProcessors>
-                <annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
-              </annotationProcessors>
-            </configuration>
           </execution>
           <execution>
             <id>testCompile</id>
